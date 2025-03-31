@@ -11,9 +11,16 @@ from .models import *
 from rest_framework.views import APIView
 from .serializers import *
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics
 from django.shortcuts import get_object_or_404
 from django.conf import settings
+import logging
+from rest_framework.permissions import AllowAny
+from rest_framework.authtoken.models import Token
+from django.db import IntegrityError
+
+# Define a logger instance
+logger = logging.getLogger(__name__)
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_403_FORBIDDEN
 
@@ -40,20 +47,38 @@ class Review_api(APIView):
             "data": comments_serializer.data
         }, status=status.HTTP_200_OK)
 
+
+
 class Post_api(APIView):
 
     def get(self, request):
-        courses = Post.objects.prefetch_related("category").all()
-        category = Category.objects.all()
+        # Get the logged-in user's profile
+        user_profile = get_object_or_404(UserProfile, user=request.user)
 
-        post_serializer = PostSerializer(courses, many=True)
-        category_serializers = CategorySerializer(category, many=True)
+        # Check the user's status
+        if user_profile.status == "Premium":
+            # Premium users can see all posts
+            posts = Post.objects.prefetch_related("category").all()
+        else:
+            # Regular users can only see posts where `is_premium` is False
+            posts = Post.objects.prefetch_related("category").filter(is_premium=False)
 
+        # Get all categories
+        categories = Category.objects.all()
+
+        # Serialize posts and categories
+        post_serializer = PostSerializer(posts, many=True)
+        category_serializer = CategorySerializer(categories, many=True)
+
+        # Return the response
         return Response(
-            {"post": post_serializer.data,
-                "category": category_serializers.data},
+            {
+                "posts": post_serializer.data,
+                "categories": category_serializer.data,
+            },
             status=status.HTTP_200_OK,
         )
+
 
 
 
@@ -130,18 +155,28 @@ class PostCreateAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+
+
 class Post_detail_api(APIView):
     serializer_class = CommentSerializer  # Set the serializer for comments
-    
+
     def get(self, request, name, *args, **kwargs):
         """
-        Handle retrieving a post's details and its comments.
+        Handle retrieving a post's details, increment views, and fetch its comments.
         """
         try:
             # Get the post by title
             post = Post.objects.get(title=name)
         except Post.DoesNotExist:
             return Response({"error": "Post not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Increment views for the post
+        if request.user.is_authenticated:  # Ensure the user is logged in
+            if request.user not in post.viewed_by.all():  # If the user hasn't viewed the post
+                post.views += 1
+                post.viewed_by.add(request.user)  # Add the user to the list of viewers
+                post.save()
 
         # Filter comments specific to the post
         comments = Comments.objects.filter(post=post)
@@ -156,17 +191,11 @@ class Post_detail_api(APIView):
         except UserProfile.DoesNotExist:
             return Response({"error": "User profile not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Example of profile-specific logic (Uncomment and adjust based on your requirement)
-        # if profile.status == "Regular":
-        #     return Response(
-        #         {"data": "You are a regular user. Premium features are limited."},
-        #         status=status.HTTP_403_FORBIDDEN
-        #     )
-
         return Response(
             {
                 "post": post_serializer.data,
                 "comments": comments_serializer.data,
+                "views": post.views,  # Include updated views count
             },
             status=status.HTTP_200_OK
         )
@@ -203,13 +232,6 @@ class Post_detail_api(APIView):
         return Response(
             comment_serializer.errors, status=status.HTTP_400_BAD_REQUEST
         )
-
-
-
-            
-         
-
-
 
 class CommentListCreateView(APIView):
     """
@@ -273,12 +295,12 @@ class SendInvitationView(APIView):
         invitation_link = f"{request.scheme}://{request.get_host()}/api/accept_invitation/{invitation.token}/"
         
         # Send the email invitation
-        # send_mail(
-        #     subject="You've been invited to contribute!",
-        #     message=f"Click here to accept the invitation: {invitation_link}",
-        #     from_email=request.user.email,
-        #     recipient_list=[email],
-        # )
+        send_mail(
+            subject="You've been invited to contribute!",
+            message=f"Click here to accept the invitation: {invitation_link}",
+            from_email=request.user.email,
+            recipient_list=[email],
+        )
 
         return Response(
             {
@@ -392,13 +414,12 @@ class EditPostView(APIView):
             status=status.HTTP_200_OK,
         )
 
-
-
 class SubscriptionView(APIView):
     serializer_class = SubscriptionSerializer
     """
     Handle creating a new subscription to the newsletter.
     """
+
     def post(self, request, *args, **kwargs):
         # Extract email from the request data
         email = request.data.get("email")
@@ -410,24 +431,75 @@ class SubscriptionView(APIView):
         # Optionally: Link the subscription to the authenticated user (if logged in)
         user = request.user if request.user.is_authenticated else None
 
-        # Create the subscription data without the user field in the serializer
+        # Create the subscription data
         subscription_data = {
             "email": email,
-            "user": user,  # The user is set here even though it's not in the serializer fields
+            "user": user,
         }
-        
 
         # Create the serializer instance
         serializer = SubscriptionSerializer(data=subscription_data)
 
         if serializer.is_valid():
-            serializer.save()
+            subscription = serializer.save()  # Save the subscription instance
+
+            # Send email to the subscriber
+            send_mail(
+                subject="Thank you for subscribing!",
+                message="You have successfully subscribed to our newsletter. Stay tuned for updates!",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+            # Send email to the website owner
+            send_mail(
+                subject="New Subscriber Alert!",
+                message=f"A new user has subscribed to your website with the email: {email}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[settings.WEBSITE_OWNER_EMAIL],
+                fail_silently=False,
+            )
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CreatorProfileAPIView(APIView):
+# class SubscriptionView(APIView):
+#     serializer_class = SubscriptionSerializer
+#     """
+#     Handle creating a new subscription to the newsletter.
+#     """
+#     def post(self, request, *args, **kwargs):
+#         # Extract email from the request data
+#         email = request.data.get("email")
+
+#         # Check if an email already exists
+#         if Subscription.objects.filter(email=email).exists():
+#             return Response({"error": "This email is already subscribed!"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         # Optionally: Link the subscription to the authenticated user (if logged in)
+#         user = request.user if request.user.is_authenticated else None
+
+#         # Create the subscription data without the user field in the serializer
+#         subscription_data = {
+#             "email": email,
+#             "user": user,  # The user is set here even though it's not in the serializer fields
+#         }
+        
+
+#         # Create the serializer instance
+#         serializer = SubscriptionSerializer(data=subscription_data)
+
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProfileAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, id):
@@ -441,3 +513,177 @@ class CreatorProfileAPIView(APIView):
             'profile': profile_serializer.data,
             'posts': post_serializer.data
         })
+
+
+
+
+
+class UserRegisterAPIView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = UserRegisterSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            # Create user
+            user = serializer.save()
+
+            # Ensure a user profile is created
+            try:
+                UserProfile.objects.get_or_create(user=user)
+            except IntegrityError:
+                return Response({"success": False, "error": "User profile already exists."},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            # Generate authentication token
+            token, _ = Token.objects.get_or_create(user=user)
+
+            # Prepare response data
+            response_data = {
+                'success': True,
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                },
+                'token': token.key,
+            }
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+        return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+class Status_pay(APIView):
+    """
+    Initiate a payment with Paystack and return the authorization URL.
+    """
+
+    def post(self, request):
+        # Ensure the user is authenticated
+        if not request.user.is_authenticated:
+            return Response({"error": "User is not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Fixed amount (e.g., NGN 30.00 = 3000 kobo)
+        amount = 3000 * 100
+
+        # Paystack initialization endpoint and headers
+        paystack_url = 'https://api.paystack.co/transaction/initialize'
+        headers = {
+            'Authorization': f'Bearer {settings.PAYSTACK_SECRET_KEY}',
+            'Content-Type': 'application/json',
+        }
+
+        # Prepare data for payment initialization
+        data = {
+            'amount': amount,  # Amount in kobo
+            'email': request.user.email,
+        }
+
+        try:
+            # Initialize the transaction with Paystack
+            response = requests.post(paystack_url, headers=headers, json=data, timeout=10)
+            response.raise_for_status()
+            response_data = response.json()
+
+            if response_data.get('status'):
+                # Extract authorization URL and transaction reference
+                authorization_url = response_data['data']['authorization_url']
+                reference = response_data['data']['reference']
+
+                # Save the transaction to the database
+                Transaction.objects.create(
+                    user=request.user,
+                    reference=reference,
+                    amount=amount,
+                    status='pending',
+                )
+
+                # Return the authorization URL and transaction reference
+                return Response({
+                    "message": "Payment initialized successfully. Proceed to complete the payment.",
+                    "authorization_url": authorization_url,
+                    "reference": reference,
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": response_data.get('message', "Unable to initialize payment.")},
+                                status=status.HTTP_400_BAD_REQUEST)
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error initializing payment: {e}")
+            return Response({"error": "Failed to connect to payment gateway. Please try again later."},
+                            status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class Verify_payment(APIView):
+    """
+    Verify the payment with Paystack and update the user's status if successful.
+    """
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({"error": "User is not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            transaction = Transaction.objects.filter(user=request.user).latest('created_at')
+        except Transaction.DoesNotExist:
+            return Response({"error": "No transaction found for this user."}, status=status.HTTP_404_NOT_FOUND)
+
+        reference = transaction.reference
+        paystack_url = f'https://api.paystack.co/transaction/verify/{reference}'
+        headers = {'Authorization': f'Bearer {settings.PAYSTACK_SECRET_KEY}'}
+
+        try:
+            response = requests.get(paystack_url, headers=headers, timeout=10)
+            response.raise_for_status()
+            response_data = response.json()
+
+            if response_data.get('status') and response_data['data'].get('status') == 'success':
+                transaction.status = 'success'
+                transaction.save()
+
+                try:
+                    user_profile = UserProfile.objects.get(user=request.user)
+                    if user_profile.status == "Regular":
+                        user_profile.status = "Premium"
+                        user_profile.save()
+                        status_message = "Status updated to Premium"
+                    else:
+                        status_message = "User is already Premium"
+
+                    return Response({
+                        "message": status_message,
+                        "status": user_profile.status,
+                    }, status=status.HTTP_200_OK)
+                except UserProfile.DoesNotExist:
+                    return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            else:
+                transaction.status = 'failed'
+                transaction.save()
+                # error_message = response_data.get('message', "Payment verification failed.")
+                # return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Payment verification failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error verifying payment: {e}")
+            return Response(
+                {"error": "Failed to connect to payment gateway. Please try again later."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+
+class TrendingPostsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        min_comments = int(request.query_params.get('min_comments', 0))
+        min_views = int(request.query_params.get('min_views', 0))
+        
+        trending_posts = Post.get_trending_posts(min_comments=min_comments, min_views=min_views)
+        
+        if not trending_posts.exists():
+            return Response({"message": "No trending posts found."}, status=200)
+        
+        serializer = TrendingPostSerializer(trending_posts, many=True)
+        return Response(serializer.data)

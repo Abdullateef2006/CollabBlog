@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     'djoser',
     "corsheaders",
+    "drf_spectacular",
+
 
 ]
 
@@ -167,3 +169,46 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',  # Authentication is required by default
     ],
 }
+
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # other configurations
+}
+
+
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+
+]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+
+SPECTACULAR_SETTINGS = {
+"TITLE": "blog API Project",
+"DESCRIPTION": "A blog API Project",
+"VERSION": "1.0.0",
+
+
+# OTHER SETTINGS
+}
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # e.g., 'smtp.gmail.com' for Gmail
+EMAIL_PORT = 587  # e.g., 587 for TLS, 465 for SSL
+EMAIL_USE_TLS = True  # Set to False if you use SSL
+EMAIL_USE_SSL = False  # Set to True if you use SSL
+EMAIL_HOST_USER = 'ojugbelelateef2006@gmail.com'
+EMAIL_HOST_PASSWORD = 'yshhvvigaryqlabg'
+DEFAULT_FROM_EMAIL = 'ojugbelelateef2006@gmail.com'  # Default "from" email
+WEBSITE_OWNER_EMAIL = 'ojugbelelateef2006@gmail.com'  # Website owner's email
+
+
+
+
+PAYSTACK_PUBLIC_KEY = 'pk_test_f9d4e9c4b70a553a45fd67aea9e4f1429de302cf'
+PAYSTACK_SECRET_KEY = 'sk_test_2de22e65cd85be13d98741474297a8e5bf84dcf5'

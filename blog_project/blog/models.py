@@ -3,6 +3,8 @@ from django.db import models
 from ckeditor_uploader.fields import RichTextUploadingField
 from django.contrib.auth.models import User
 import uuid
+from django.db.models import Count, Q
+
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -21,12 +23,38 @@ class Post(models.Model):
     category = models.ManyToManyField(Category, related_name="posts")
     is_premium = models.BooleanField(default=False)  # Paywall protection
     published_date = models.DateTimeField(auto_now_add=True)
+    views = models.IntegerField(default=0)  # Tracks the number of views
+    viewed_by = models.ManyToManyField(User, related_name="viewed_posts", blank=True)  # Tracks users who viewed the post
+
+
+    
 
     class Meta:
         ordering = ['-published_date']
 
     def __str__(self):
         return self.title
+  
+    @classmethod
+    def get_trending_posts(cls, min_comments=0, min_views=0):
+        """
+        Get trending posts based on comments and views.
+        Returns posts with the highest views and comments in descending order.
+        """
+        queryset = cls.objects.annotate(
+            comment_count=Count('comments')
+        )
+        
+        filtered_queryset = queryset.filter(
+            Q(comment_count__gte=min_comments) | Q(views__gte=min_views)
+        )
+        
+        if not filtered_queryset.exists():
+            # If no posts meet the threshold, return top posts sorted by views/comments
+            return queryset.order_by('-views', '-comment_count')[:10]  # Top 10 posts
+        
+        return filtered_queryset.order_by('-views', '-comment_count')
+
 
 
 class  UserProfile(models.Model):
@@ -68,7 +96,7 @@ class  UserProfile(models.Model):
 
 
 class Comments(models.Model):
-    post = models.ForeignKey(Post,  on_delete=models.CASCADE)
+    post = models.ForeignKey(Post,  on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -97,3 +125,20 @@ class Subscription(models.Model):
     
     def __str__(self):
         return f"Subscription by {self.email}"
+
+
+from django.db import models
+from django.contrib.auth.models import User
+
+class Transaction(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
+    reference = models.CharField(max_length=100, unique=True)  # Reference should remain unique across all users
+    amount = models.PositiveIntegerField()  # Amount in kobo
+    status = models.CharField(max_length=20, default='pending')  # Status: pending, success, failed
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'reference')  # Ensure each user has unique references if needed
+
+    def __str__(self):
+        return f"Transaction {self.reference} for {self.user.username} - {self.status}"

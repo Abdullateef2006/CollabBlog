@@ -35,7 +35,7 @@ class PostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ['slug', 'title', 'content', 'author', 'contributors', 'is_premium', 'category', 'published_date']
+        fields = ['id','slug', 'title', 'content', 'author', 'contributors', 'is_premium', 'category', 'published_date', 'views']
         read_only_fields = ['slug', 'author', 'contributors', 'is_premium', 'published_date', ]
 
     def update(self, instance, validated_data):
@@ -110,3 +110,57 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ['email', 'subscription_date']
+
+
+from rest_framework import serializers
+from django.contrib.auth.models import User
+from .models import UserProfile
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    """
+    Serializer for registering a new user.
+    """
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    confirm_password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password', 'confirm_password']
+
+    def validate(self, data):
+        """
+        Ensure the passwords match.
+        """
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError({"password": "Passwords do not match."})
+        return data
+
+    def create(self, validated_data):
+        """
+        Create a new user instance.
+        """
+        validated_data.pop('confirm_password')  # Exclude `confirm_password` as it's not part of the model
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password']
+        )
+        return user
+
+
+# class UserProfileSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for the UserProfile model.
+#     """
+#     user = serializers.StringRelatedField(read_only=True)  # Display username instead of User ID
+
+#     class Meta:
+#         model = UserProfile
+#         fields = ['user', 'status']
+
+class TrendingPostSerializer(serializers.ModelSerializer):
+    comment_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Post
+        fields = ['id', 'title', 'slug', 'content', 'author', 'views', 'comment_count', 'published_date']

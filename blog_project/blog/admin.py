@@ -32,3 +32,4 @@ class ModelNameAdmin(admin.ModelAdmin):
 admin.site.register(Comments)
 admin.site.register(Invitation)
 admin.site.register(Subscription)
+admin.site.register(Transaction)
