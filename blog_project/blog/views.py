@@ -27,6 +27,8 @@ from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_403_FO
 
 
 class Category_api(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
             
         category = Category.objects.all()
@@ -38,6 +40,8 @@ class Category_api(APIView):
 
 
 class Review_api(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
             
         comments = Comments.objects.all()
@@ -50,6 +54,8 @@ class Review_api(APIView):
 
 
 class Post_api(APIView):
+    permission_classes = [IsAuthenticated]
+
 
     def get(self, request):
         # Get the logged-in user's profile
@@ -84,10 +90,21 @@ class Post_api(APIView):
 
 
 class Course_List_Category(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def get(request, self, name):
+
+    def get(self, request, name):
         category = get_object_or_404(Category, name=name)
-        post = Post.objects.prefetch_related("category").filter(category=category)
+        user_profile = get_object_or_404(UserProfile, user=request.user)
+
+         # Check the user's status
+        if user_profile.status == "Premium":
+            # Premium users can see all posts
+            post = Post.objects.prefetch_related("category").filter(category=category)
+        else:
+            # Regular users can only see posts where `is_premium` is False
+            post = Post.objects.prefetch_related("category").filter(is_premium=False, category=category)
+
         categories = Category.objects.all()
 
         post_serializer = PostSerializer(post, many=True)
@@ -102,6 +119,8 @@ class Course_List_Category(APIView):
         
 class ProfileCreateEdit(APIView):
     serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticated]
+    
     
     def get(self, request):
         # Retrieve the profile for the logged-in user or 404 if not found
@@ -160,7 +179,7 @@ class PostCreateAPIView(APIView):
 
 class Post_detail_api(APIView):
     serializer_class = CommentSerializer  # Set the serializer for comments
-
+    permission_classes = [IsAuthenticated]
     def get(self, request, name, *args, **kwargs):
         """
         Handle retrieving a post's details, increment views, and fetch its comments.
@@ -238,6 +257,7 @@ class CommentListCreateView(APIView):
     API View to list and create comments for a specific post.
     """
     serializer_class  = CommentSerializer
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, name):
         """
@@ -416,6 +436,7 @@ class EditPostView(APIView):
 
 class SubscriptionView(APIView):
     serializer_class = SubscriptionSerializer
+    permission_classes = [IsAuthenticated]
     """
     Handle creating a new subscription to the newsletter.
     """
@@ -552,6 +573,7 @@ class UserRegisterAPIView(generics.GenericAPIView):
 
         return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 class Status_pay(APIView):
+    permission_classes = [IsAuthenticated]
     """
     Initiate a payment with Paystack and return the authorization URL.
     """
@@ -612,6 +634,7 @@ class Status_pay(APIView):
 
 
 class Verify_payment(APIView):
+    permission_classes = [IsAuthenticated]
     """
     Verify the payment with Paystack and update the user's status if successful.
     """
