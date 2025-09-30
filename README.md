@@ -138,16 +138,26 @@ GET /api/trending-posts/ - Get trending posts
 
 POST /api/subscribe/ - Newsletter subscription
 
+
 ## ⚙️ Installation
 
-git clone https://github.com/Abdullateef2006/advanced_blog.git
-cd advanced_blog/blog_project
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Abdullateef2006/CollabBlog
+   cd blog_project
+
+2. Create a virtual environment
+```bash
+python -m venv env
+source env/bin/activate  # on Windows use `env\Scripts\activate`
+
+3.Install dependencies:
+```bash
 pip install -r requirements.txt
-echo "SECRET_KEY=your-key" > .env
-echo "DEBUG=True" >> .env
-echo "PAYSTACK_SECRET_KEY=your-paystack-key" >> .env
-python manage.py migrate
-python manage.py createsuperuser
+
+
+4.Run the app:
+```bash
+python mange.py migrate
 python manage.py runserver
+
