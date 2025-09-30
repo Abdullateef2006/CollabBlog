@@ -1,7 +1,7 @@
 A comprehensive, production-ready blog platform built with Django and Django REST Framework that includes premium content, payment integration, collaboration features, and advanced user management.
 
 
-🌟 Complete Feature Overview
+## 🚀 Features
 🔐 Authentication & User Management
 User Registration & Login with token authentication
 
@@ -66,7 +66,7 @@ Recent Posts ordering
 
 Author Profile Pages with post collections
 
-🛠️ Technology Stack
+## 🛠️ Technologies Used
 Backend
 Django 4.2+ - Web framework
 
@@ -98,7 +98,7 @@ Git
 
 Paystack account (for payment processing)
 
-🔧 API Endpoints
+## Endpoints
 Authentication
 POST /api/register/ - User registration
 
@@ -138,6 +138,7 @@ GET /api/trending-posts/ - Get trending posts
 
 POST /api/subscribe/ - Newsletter subscription
 
+## ⚙️ Installation
 
 git clone https://github.com/Abdullateef2006/advanced_blog.git
 cd advanced_blog/blog_project
