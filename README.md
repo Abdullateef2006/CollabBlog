@@ -1,151 +1,117 @@
-A comprehensive, production-ready blog platform built with Django and Django REST Framework that includes premium content, payment integration, collaboration features, and advanced user management.
+# 📝 Advanced Blog Platform
 
+A comprehensive, production-ready blog platform built with **Django** and **Django REST Framework** that includes premium content, payment integration, collaboration features, and advanced user management.
+
+---
 
 ## 🚀 Features
-🔐 Authentication & User Management
-User Registration & Login with token authentication
 
-Password Reset functionality
+### 🔐 Authentication & User Management
+- User Registration & Login with token authentication  
+- Password Reset functionality  
+- User Profiles with avatar uploads and bio  
+- Role-based Access Control (Regular vs Premium users)  
+- Profile Management with edit capabilities  
 
-User Profiles with avatar uploads and bio
+### 💰 Premium Content & Payment System
+- **Paystack Payment Integration** for premium subscriptions  
+- Two-tier User System: **Regular (free)** and **Premium (paid)**  
+- Premium Content Gating - exclusive posts for paying users  
+- Payment Verification with transaction tracking  
+- Automatic User Status Upgrade after successful payment  
 
-Role-based Access Control (Regular vs Premium users)
+### 👥 Collaboration Features
+- Post Invitation System - invite contributors via email  
+- Multi-author Posts with contributor management  
+- Invitation Token System with acceptance tracking  
+- Role-based Post Editing (authors and contributors only)  
 
-Profile Management with edit capabilities
+### 📝 Advanced Content Management
+- Rich Text Editor (**CKEditor**) for enhanced content creation  
+- Category-based Organization with filtering  
+- Post Scheduling with publication dates  
+- Premium Post Flagging for exclusive content  
+- View Tracking with user-specific view counting  
 
-💰 Premium Content & Payment System
-Paystack Payment Integration for premium subscriptions
+### 💬 Social & Engagement Features
+- Comment System with user authentication  
+- Nested Comments for discussions  
+- Post View Analytics with unique viewer tracking  
+- Trending Posts Algorithm based on views and comments  
+- Newsletter Subscription with email notifications  
 
-Two-tier User System: Regular (free) and Premium (paid)
+### 🎯 Content Discovery
+- Advanced Search & Filtering by categories  
+- Trending Posts with customizable thresholds  
+- Category-based Browsing  
+- Recent Posts ordering  
+- Author Profile Pages with post collections  
 
-Premium Content Gating - exclusive posts for paying users
-
-Payment Verification with transaction tracking
-
-Automatic User Status Upgrade after successful payment
-
-👥 Collaboration Features
-Post Invitation System - invite contributors via email
-
-Multi-author Posts with contributor management
-
-Invitation Token System with acceptance tracking
-
-Role-based Post Editing (authors and contributors only)
-
-📝 Advanced Content Management
-Rich Text Editor (CKEditor) for enhanced content creation
-
-Category-based Organization with filtering
-
-Post Scheduling with publication dates
-
-Premium Post Flagging for exclusive content
-
-View Tracking with user-specific view counting
-
-💬 Social & Engagement Features
-Comment System with user authentication
-
-Nested Comments for discussions
-
-Post View Analytics with unique viewer tracking
-
-Trending Posts Algorithm based on views and comments
-
-Newsletter Subscription with email notifications
-
-🎯 Content Discovery
-Advanced Search & Filtering by categories
-
-Trending Posts with customizable thresholds
-
-Category-based Browsing
-
-Recent Posts ordering
-
-Author Profile Pages with post collections
+---
 
 ## 🛠️ Technologies Used
-Backend
-Django 4.2+ - Web framework
 
-Django REST Framework - API development
+### Backend
+- **Django 4.2+** – Web framework  
+- **Django REST Framework** – API development  
+- **CKEditor with Upload** – Rich text editing  
+- **Paystack API** – Payment processing  
+- **SQLite / PostgreSQL** – Database  
+- **Pillow** – Image processing  
 
-CKEditor with Upload - Rich text editing
+### Additional Features
+- Email Integration (invitations, notifications)  
+- File Upload (images, avatars)  
+- UUID-based Invitation System  
+- Custom Permissions System  
 
-Paystack API - Payment processing
+---
 
-SQLite/PostgreSQL - Database
+## 📋 Prerequisites
+- Python 3.8 or higher  
+- pip (Python package manager)  
+- Git  
+- Paystack account (for payment processing)  
 
-Pillow - Image processing
+---
 
-Additional Features
-Email Integration (invitations, notifications)
+## 📡 API Endpoints
 
-File Upload (images, avatars)
+### 🔐 Authentication
+- `POST /api/register/` – User registration  
+- `POST /api/login/` – User login (token-based)  
+- `GET /api/profile/` – User profile management  
 
-UUID-based Invitation System
+### 📝 Posts & Content
+- `GET /api/posts/` – List posts (filtered by user status)  
+- `GET /api/posts/category/<name>/` – Posts by category  
+- `GET /api/posts/<title>/` – Single post with comments  
+- `POST /api/posts/create/` – Create new post  
+- `PATCH /api/posts/<title>/edit/` – Edit post (author/contributors only)  
 
-Custom Permissions System
+### 💰 Payments & Premium
+- `POST /api/payment/initiate/` – Initialize Paystack payment  
+- `POST /api/payment/verify/` – Verify payment and upgrade user  
+- Premium posts automatically restricted for regular users  
 
-📋 Prerequisites
-Python 3.8 or higher
+### 👥 Collaboration
+- `POST /api/posts/<title>/invite/` – Send contributor invitations  
+- `GET /api/accept_invitation/<token>/` – Accept invitation  
+- `GET /api/posts/<title>/contributors/` – List post contributors  
 
-pip (Python package manager)
+### 💬 Engagement
+- `POST /api/posts/<title>/comments/` – Add comments  
+- `GET /api/trending-posts/` – Get trending posts  
+- `POST /api/subscribe/` – Newsletter subscription  
 
-Git
-
-Paystack account (for payment processing)
-
-## Endpoints
-Authentication
-POST /api/register/ - User registration
-
-POST /api/login/ - User login (token-based)
-
-GET /api/profile/ - User profile management
-
-Posts & Content
-GET /api/posts/ - List posts (filtered by user status)
-
-GET /api/posts/category/<name>/ - Posts by category
-
-GET /api/posts/<title>/ - Single post with comments
-
-POST /api/posts/create/ - Create new post
-
-PATCH /api/posts/<title>/edit/ - Edit post (author/contributors only)
-
-Payments & Premium
-POST /api/payment/initiate/ - Initialize Paystack payment
-
-POST /api/payment/verify/ - Verify payment and upgrade user
-
-Premium posts automatically restricted for regular users
-
-Collaboration
-POST /api/posts/<title>/invite/ - Send contributor invitations
-
-GET /api/accept_invitation/<token>/ - Accept invitation
-
-GET /api/posts/<title>/contributors/ - List post contributors
-
-Engagement
-POST /api/posts/<title>/comments/ - Add comments
-
-GET /api/trending-posts/ - Get trending posts
-
-POST /api/subscribe/ - Newsletter subscription
-
+---
 
 ## ⚙️ Installation
 
-1. Clone the repository:
+1. **Clone the repository**  
    ```bash
    git clone https://github.com/Abdullateef2006/CollabBlog
    cd blog_project
-
 2. Create a virtual environment
 ```bash
 python -m venv env
@@ -160,4 +126,3 @@ pip install -r requirements.txt
 ```bash
 python mange.py migrate
 python manage.py runserver
-
